@@ -3,693 +3,617 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Visualizador de NF-e</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
+    <title>Auditor DRE | Dashboard de Conciliação Analítica</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';</script>
+
     <style>
         :root {
-            /* Tema em tons de azul claro */
-            --bg-page: #f0f6f9;
-            --bg-panel: #ffffff;
-            --border-color: #b3d4fc;
-            --tab-bg: #e1effa;
-            --tab-hover: #cbe3f5;
-            --tab-active: #ffffff;
-            --tab-active-border: #0066cc;
-            --text-color: #333333;
-            --label-color: #555555;
-            --title-color: #0055a4;
-            --fieldset-title: #005b9f;
-            --btn-bg: #4da6ff;
-            --btn-hover: #3399ff;
-            --grid-border: #d9e8f5;
+            /* Paleta Corporativa Dashboard */
+            --bg-body: #eef2f7;
+            --bg-card: #ffffff;
+            --text-main: #1a2c3e;
+            --text-muted: #4a627a;
+            --primary: #1f5e8c;
+            --primary-hover: #0e4162;
+            --border-color: #e0e9f0;
+            --border-highlight: #cbdde9;
+            
+            --success: #2a7f6e;
+            --success-bg: #e6f4f1;
+            --danger: #e74c3c;
+            --danger-bg: #fceceb;
+            --warning: #f1c40f;
+            
+            --radius-card: 28px;
+            --radius-input: 18px;
+            --radius-pill: 40px;
         }
 
-        body { font-family: Arial, sans-serif; background-color: var(--bg-page); color: var(--text-color); margin: 0; padding: 20px; }
-        .container { max-width: 1300px; margin: 0 auto; background: var(--bg-panel); padding: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.05); border-radius: 8px; }
-        h2 { color: var(--title-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; font-weight: normal; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+
+        body { background: var(--bg-body); color: var(--text-main); padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+        /* --- HEADER --- */
+        .header-with-icon { display: flex; align-items: center; gap: 12px; margin-bottom: 0.2rem; flex-wrap: wrap; }
+        .header-with-icon svg { width: 48px; height: 48px; }
+        h1 { font-size: 1.8rem; font-weight: 700; margin: 0; color: var(--primary); }
+        .sub { color: var(--text-muted); margin-bottom: 1rem; border-left: 3px solid #2c7da0; padding-left: 1rem; font-size: 0.95rem; }
+
+        /* --- CARDS & PANELS --- */
+        .card-panel {
+            background: var(--bg-card); border-radius: var(--radius-card); padding: 1.5rem 2rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid var(--border-color);
+        }
+
+        /* --- UPLOADS --- */
+        .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .upload-box {
+            position: relative; border: 2px dashed var(--border-highlight); border-radius: var(--radius-input);
+            background: #fdfdfd; padding: 20px; transition: 0.3s; display: flex; flex-direction: column; gap: 10px;
+        }
+        .upload-box:hover { border-color: var(--primary); background: #e8f0f5; }
+        .upload-box h3 { font-size: 1.05rem; color: var(--primary); display: flex; align-items: center; gap: 8px; margin: 0; }
+        .upload-box p { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
+        input[type="file"] { font-family: 'Fira Code', monospace; font-size: 0.85rem; cursor: pointer; width: 100%; }
+
+        /* --- BOTOES --- */
+        .button-group { display: flex; gap: 12px; justify-content: center; margin: 10px 0; }
+        .btn {
+            background: var(--primary); color: white; border: none; padding: 12px 28px;
+            border-radius: var(--radius-pill); font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.95rem;
+            display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(31,94,140,0.2);
+        }
+        .btn:hover:not(:disabled) { background: var(--primary-hover); transform: scale(0.98); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+        .btn-imprimir { background: #4a627a; }
+        .btn-imprimir:hover:not(:disabled) { background: #2c3e50; }
+
+        #loading { display: none; color: var(--primary); font-weight: bold; font-size: 0.9rem; text-align: center; }
+
+        /* --- KPIs --- */
+        .kpi-grid { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+        .kpi {
+            background: var(--bg-card); border-radius: 24px; padding: 1rem 1.4rem;
+            flex: 1 1 200px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); border: 1px solid var(--border-color);
+            display: flex; flex-direction: column;
+        }
+        .kpi-label { font-size: 0.75rem; text-transform: uppercase; color: #5b7f9b; font-weight: 700; letter-spacing: 0.5px;}
+        .kpi-value { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1.2; margin-top: 5px; }
+        .kpi-value.danger { color: var(--danger); }
+        .kpi-value.success { color: var(--success); }
+        .kpi-subtext { font-size: 0.68rem; color: #7c94ab; margin-top: 6px; font-weight: 500; line-height: 1.3; }
+
+        /* --- TABELA DE AUDITORIA --- */
+        .table-wrapper { overflow-x: auto; border-radius: 16px; border: 1px solid var(--border-color); background: white; }
+        table { width: 100%; border-collapse: collapse; font-family: 'Fira Code', monospace; font-size: 0.85rem; }
+        th, td { padding: 10px 16px; text-align: right; border-bottom: 1px solid #e9f0f5; }
         
-        /* Controles de Arquivo */
-        .file-controls { margin-bottom: 20px; padding: 15px; background: #eef5fa; border: 1px dashed var(--border-color); border-radius: 5px; text-align: center; }
-        input[type="file"] { font-size: 16px; cursor: pointer; }
+        th { background: #f4fafd; color: #1a5d7d; font-weight: 700; border-bottom: 2px solid var(--border-highlight); position: sticky; top: 0; z-index: 10; font-family: 'Inter', sans-serif;}
+        th:first-child, td:first-child { text-align: left; font-family: 'Inter', sans-serif; }
+        th:first-child { z-index: 20; }
+        tr:hover td { background-color: #f8fbff; }
 
-        /* Dados Gerais Topo */
-        .dados-gerais-topo { margin-bottom: 20px; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-ok { background-color: var(--success-bg); color: var(--success); border: 1px solid #a3d9cf; }
+        .status-erro { background-color: var(--danger-bg); color: var(--danger); border: 1px solid #f5b7b1; }
+        .status-na { background-color: #f0f4f8; color: #7c94ab; border: 1px solid #cbdde9; }
 
-        /* Abas */
-        .tabs { overflow: hidden; border-bottom: 1px solid var(--border-color); margin-top: 20px; display: flex; flex-wrap: wrap; }
-        .tab-btn { background-color: var(--tab-bg); border: 1px solid var(--border-color); border-bottom: none; outline: none; cursor: pointer; padding: 10px 16px; transition: 0.2s; font-size: 13px; margin-right: 2px; border-radius: 5px 5px 0 0; color: #333; }
-        .tab-btn:hover { background-color: var(--tab-hover); }
-        .tab-btn.active { background-color: var(--tab-active); color: var(--tab-active-border); border-top: 3px solid var(--tab-active-border); font-weight: bold; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
+        .diff-erro { color: var(--danger); font-weight: 800; }
+        .diff-ok { color: var(--success); font-weight: 600; }
 
-        /* Conteúdo da Aba */
-        .tab-content { display: none; padding: 20px; border: 1px solid var(--border-color); border-top: none; background-color: var(--bg-panel); }
+        /* --- HIERARQUIA / DRILL-DOWN --- */
+        .btn-expand {
+            background: var(--primary); border: none; border-radius: 6px;
+            width: 24px; height: 24px; line-height: 22px; text-align: center;
+            cursor: pointer; font-weight: 800; color: #ffffff;
+            margin-right: 12px; display: inline-flex; justify-content: center; align-items: center;
+            transition: 0.2s; flex-shrink: 0; box-shadow: 0 2px 4px rgba(31,94,140,0.2);
+        }
+        .btn-expand:hover { background: var(--primary-hover); transform: scale(1.05); }
+        .btn-expand.open { background: var(--danger); box-shadow: none; } 
         
-        /* Agrupamentos */
-        .fieldset { border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; background-color: #fbfdff; border-radius: 4px; }
-        .fieldset-title { font-weight: bold; color: var(--fieldset-title); margin-bottom: 15px; text-align: center; font-size: 1.1em; }
-        .sub-fieldset-title { font-weight: bold; color: #444; margin-top: 15px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .row-totalizador td { background-color: #f0f5fa !important; font-weight: 800; border-top: 2px solid var(--primary); color: #0e4162; font-size: 0.95rem; }
         
-        /* Grid de Dados */
-        .data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 10px; }
-        .data-grid-small { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-        .data-item { display: flex; flex-direction: column; }
-        .label { font-size: 11px; color: var(--label-color); margin-bottom: 3px; }
-        .value { border: 1px solid var(--grid-border); padding: 6px; background-color: #fff; min-height: 16px; font-size: 13px; color: #000; border-radius: 3px; word-break: break-word; }
+        .conta-sintetica td { background-color: #ffffff; font-weight: 700; color: #1f5e8c; border-top: 1px solid var(--border-highlight); }
+        .conta-sintetica td:first-child .account-label { font-size: 0.9rem; }
+        
+        .conta-analitica td { color: #4a627a; }
+        .conta-analitica td:first-child .account-label { padding-left: 36px; font-weight: 500; font-size: 0.85rem; }
 
-        /* Expansível (Produtos e Cobrança) */
-        details { border: 1px solid var(--border-color); margin-bottom: 10px; background: #fff; border-radius: 4px; }
-        summary { padding: 10px; background: var(--tab-bg); cursor: pointer; list-style: none; display: flex; align-items: center; border-radius: 4px; font-size: 13px; font-weight: bold; }
-        summary:hover { background: var(--tab-hover); }
-        summary::-webkit-details-marker { display: none; }
-        summary::before { content: '＋ '; color: var(--tab-active-border); font-size: 16px; margin-right: 5px; width: 20px; text-align: center; }
-        details[open] summary::before { content: '－ '; }
-        details[open] summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: 1px solid var(--border-color); }
-        .details-content { padding: 15px; background: #fafcfd; border-radius: 0 0 4px 4px; }
+        /* Bloco Expandido (Conexão Visual) */
+        tr.parent-expanded td { background-color: #e8f0f5 !important; border-bottom: 2px solid var(--primary); color: #0e4162; }
+        tr.parent-expanded td:first-child { box-shadow: inset 5px 0 0 0 var(--primary); }
 
-        /* Botões de Ação */
-        .actions { margin-top: 30px; text-align: center; }
-        .btn { background: var(--btn-bg); border: none; padding: 12px 24px; cursor: pointer; font-weight: bold; color: white; border-radius: 5px; font-size: 15px; transition: 0.2s; }
-        .btn:hover { background: var(--btn-hover); }
+        .detail-row td { background-color: #f4fafd !important; border-bottom: 1px dashed var(--border-highlight); color: #4a627a; font-size: 0.8rem; }
+        .detail-row td:first-child { padding-left: 70px; font-weight: 600; box-shadow: inset 5px 0 0 0 var(--primary); }
+        .detail-row.last-child td { border-bottom: 2px solid var(--primary) !important; }
 
-        /* Estilos para Impressão */
+        .detail-empty { color: #cbdde9; }
+        .val-negative { color: var(--danger); font-weight: 600; font-family: 'Fira Code', monospace; }
+        .val-positive { font-weight: 500; font-family: 'Fira Code', monospace; }
+
+        footer { text-align: center; font-size: 0.75rem; margin-top: 1rem; color: #7c94ab; border-top: 1px solid var(--border-highlight); padding-top: 1.5rem; line-height: 1.5; }
+
+        /* --- MODO IMPRESSÃO --- */
         @media print {
-            body { background: #fff; padding: 0; color: #000; }
-            .container { box-shadow: none; max-width: 100%; padding: 0; }
-            .file-controls, .tabs, .actions { display: none !important; }
-            .tab-content { display: block !important; border: none; padding: 0; margin-bottom: 30px; }
-            details[open] .details-content { border: none; padding: 10px 0; }
-            details, summary { border: none !important; background: transparent !important; }
-            summary::before { display: none; }
-            .value, .fieldset { border: 1px solid #ccc; background: transparent; }
-            .fieldset { page-break-inside: avoid; margin-bottom: 15px; }
-            h2 { color: #000; }
+            body { background: #fff !important; padding: 0 !important; color: #000 !important; }
+            .card-panel { box-shadow: none !important; border: none !important; padding: 0 !important; margin: 0 !important; }
+            .upload-grid, .button-group, #loading, footer { display: none !important; }
+            .table-wrapper { border: none !important; overflow: visible !important; }
+            .kpi-grid { gap: 0.5rem; margin-bottom: 1rem; }
+            .kpi { border: 1px solid #ddd !important; padding: 0.5rem; border-radius: 8px !important; box-shadow: none !important; }
+            .kpi-subtext { display: none !important; } 
+            
+            table { width: 100% !important; font-size: 10px !important; }
+            th { background-color: #e6f0f9 !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 6px !important; }
+            td { padding: 4px 6px !important; border: 1px solid #ddd !important; }
+            
+            .btn-expand { display: none !important; }
+            .status-badge { border: none !important; background: transparent !important; color: #000 !important; padding: 0 !important; }
+            .diff-erro, .val-negative { color: #000 !important; font-weight: bold !important; } 
+            
+            tr.parent-expanded td { background-color: #e8f0f5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .row-totalizador td { background-color: #eef5fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .detail-row td { background-color: #f4fafd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            
+            tr.parent-expanded td:first-child, .detail-row td:first-child { box-shadow: none !important; border-left: 3px solid var(--primary) !important; }
+            tr { page-break-inside: avoid; }
         }
-
-        body.print-mode .tabs { display: none; }
-        body.print-mode .tab-content { display: block; }
-        body.print-mode details { open: true; }
-        body.print-mode details summary { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2><span style="font-size:24px;">🧾</span> Consultar NF-e (Leitor Avançado)</h2>
-    
-    <div class="file-controls no-print">
-        <label for="xmlFile" style="display:block; margin-bottom:10px; font-size:16px;"><strong>Selecione o arquivo XML da NF-e para visualizar os dados completos:</strong></label>
-        <input type="file" id="xmlFile" accept=".xml">
+    <div class="header-with-icon">
+        <svg viewBox="0 0 100 100">
+            <rect width="100" height="100" rx="20" fill="#1f5e8c" />
+            <rect x="25" y="20" width="50" height="60" rx="6" fill="white" stroke="#0e4162" stroke-width="2" />
+            <line x1="35" y1="35" x2="65" y2="35" stroke="#1f5e8c" stroke-width="3" stroke-linecap="round" />
+            <line x1="35" y1="48" x2="65" y2="48" stroke="#1f5e8c" stroke-width="3" stroke-linecap="round" />
+            <line x1="35" y1="61" x2="65" y2="61" stroke="#1f5e8c" stroke-width="3" stroke-linecap="round" />
+            <circle cx="72" cy="70" r="10" fill="#ffc107" stroke="#e0a800" stroke-width="2" />
+            <line x1="66" y1="70" x2="78" y2="70" stroke="#0e4162" stroke-width="2" />
+            <line x1="72" y1="64" x2="72" y2="76" stroke="#0e4162" stroke-width="2" />
+        </svg>
+        <h1>Auditor DRE | Painel de Conciliação Analítica</h1>
     </div>
+    <div class="sub">Motor de Extração Aprimorado • Tolerância Dinâmica • Conciliação Matriz x Filiais</div>
 
-    <div class="fieldset dados-gerais-topo" id="dadosGeraisTopo" style="display: none;">
-        <div class="fieldset-title" style="text-align:left; color:#333; font-size:14px;">Dados Gerais</div>
-        <div class="data-grid">
-            <div class="data-item"><span class="label">Chave de Acesso</span><div class="value" id="top-chave"></div></div>
-            <div class="data-item" style="max-width: 100px;"><span class="label">Número</span><div class="value" id="top-numero"></div></div>
-            <div class="data-item" style="max-width: 100px;"><span class="label">Versão XML</span><div class="value" id="top-versao"></div></div>
-        </div>
-    </div>
+    <div class="card-panel" id="uploadPanel">
+        <div class="upload-grid">
+            <div class="upload-box">
+                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> 1. Arquivo Consolidado</h3>
+                <p>Referência DRE (Plano de Contas Master).</p>
+                <input type="file" id="pdfConsolidado" accept="application/pdf">
+            </div>
 
-    <div class="tabs no-print" id="tabContainer" style="display: none;">
-        <button class="tab-btn active" onclick="openTab(event, 'tab-nfe')">NFe</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-emit')">Emitente</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-dest')">Destinatário</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-prod')">Produtos e Serviços</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-totais')">Totais</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-transp')">Transporte</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-cobr')">Cobrança</button>
-        <button class="tab-btn" onclick="openTab(event, 'tab-inf')">Informações Adicionais</button>
-    </div>
-
-    <div id="tab-nfe" class="tab-content">
-        <div class="fieldset">
-            <div class="fieldset-title">Dados da NF-e</div>
-            <div class="data-grid">
-                <div class="data-item"><span class="label">Modelo</span><div class="value" id="nfe-mod"></div></div>
-                <div class="data-item"><span class="label">Série</span><div class="value" id="nfe-serie"></div></div>
-                <div class="data-item"><span class="label">Número</span><div class="value" id="nfe-nnf"></div></div>
-                <div class="data-item"><span class="label">Data de Emissão</span><div class="value" id="nfe-dhemi"></div></div>
-                <div class="data-item"><span class="label">Data/Hora de Saída ou Entrada</span><div class="value" id="nfe-dhsai"></div></div>
-                <div class="data-item"><span class="label">Valor Total da Nota Fiscal</span><div class="value" id="nfe-vNF"></div></div>
+            <div class="upload-box">
+                <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> 2. Filiais (Não Consolidados)</h3>
+                <p>Arquivo multipáginas para cruzamento analítico.</p>
+                <input type="file" id="pdfFiliais" accept="application/pdf" multiple>
             </div>
         </div>
+
+        <div class="button-group">
+            <button class="btn" id="btnProcessar">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Processar Malha Contábil
+            </button>
+        </div>
+        <div id="loading">Lendo páginas, alinhando coordenadas e gerando árvore analítica... Aguarde.</div>
+    </div>
+
+    <div id="resultsArea" style="display: none;">
         
-        <div class="fieldset">
-            <div class="fieldset-title">Emissão</div>
-            <div class="data-grid">
-                <div class="data-item"><span class="label">Processo</span><div class="value" id="nfe-proc"></div></div>
-                <div class="data-item"><span class="label">Versão do Processo</span><div class="value" id="nfe-verproc"></div></div>
-                <div class="data-item"><span class="label">Tipo de Emissão</span><div class="value" id="nfe-tpemis"></div></div>
-                <div class="data-item"><span class="label">Finalidade</span><div class="value" id="nfe-finnfe"></div></div>
-                <div class="data-item"><span class="label">Natureza da Operação</span><div class="value" id="nfe-natop"></div></div>
-                <div class="data-item"><span class="label">Indicador de Intermediador/Marketplace</span><div class="value" id="nfe-indintermed"></div></div>
-                <div class="data-item"><span class="label">Tipo da Operação</span><div class="value" id="nfe-tpnf"></div></div>
-                <div class="data-item"><span class="label">Digest Value da NF-e</span><div class="value" id="nfe-digval"></div></div>
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="kpi-label">Resultado Consolidado</div>
+                <div class="kpi-value" id="kpiResultadoMaster">R$ 0,00</div>
+                <div class="kpi-subtext">Valor do Lucro/Prejuízo Líquido final extraído do arquivo Matriz.</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">Soma Filiais DRE</div>
+                <div class="kpi-value" id="kpiResultadoFiliais">R$ 0,00</div>
+                <div class="kpi-subtext">Valor acumulado do Resultado Líquido lendo todas as filiais.</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">Rubricas Analisadas</div>
+                <div class="kpi-value" id="kpiTotalContas">0</div>
+                <div class="kpi-subtext">Total de linhas de contas contábeis validadas em toda a DRE.</div>
+            </div>
+            <div class="kpi">
+                <div class="kpi-label">Divergências Encontradas</div>
+                <div class="kpi-value success" id="kpiDivergencias">0</div>
+                <div class="kpi-subtext">Contas com diferença acima da tolerância contábil de R$ 0,05.</div>
             </div>
         </div>
 
-        <div class="fieldset">
-            <div class="fieldset-title">Situação Atual</div>
-            <div class="data-grid">
-                <div class="data-item"><span class="label">Eventos da NF-e</span><div class="value">Autorização de Uso</div></div>
-                <div class="data-item"><span class="label">Protocolo</span><div class="value" id="nfe-prot"></div></div>
-                <div class="data-item"><span class="label">Data Autorização</span><div class="value" id="nfe-dhrecbto"></div></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="tab-emit" class="tab-content">
-        <div class="fieldset">
-            <div class="fieldset-title">Dados do Emitente</div>
-            <div class="data-grid">
-                <div class="data-item"><span class="label">Nome / Razão Social</span><div class="value" id="emit-xnome"></div></div>
-                <div class="data-item"><span class="label">Nome Fantasia</span><div class="value" id="emit-xfant"></div></div>
-                <div class="data-item"><span class="label">CNPJ / CPF</span><div class="value" id="emit-cnpj"></div></div>
-                <div class="data-item"><span class="label">Endereço</span><div class="value" id="emit-end"></div></div>
-                <div class="data-item"><span class="label">Bairro / Distrito</span><div class="value" id="emit-bairro"></div></div>
-                <div class="data-item"><span class="label">CEP</span><div class="value" id="emit-cep"></div></div>
-                <div class="data-item"><span class="label">Município</span><div class="value" id="emit-mun"></div></div>
-                <div class="data-item"><span class="label">Telefone</span><div class="value" id="emit-fone"></div></div>
-                <div class="data-item"><span class="label">UF</span><div class="value" id="emit-uf"></div></div>
-                <div class="data-item"><span class="label">País</span><div class="value" id="emit-pais"></div></div>
-                <div class="data-item"><span class="label">Inscrição Estadual</span><div class="value" id="emit-ie"></div></div>
-                <div class="data-item"><span class="label">Inscrição Estadual do Substituto Tributário</span><div class="value" id="emit-iest"></div></div>
-                <div class="data-item"><span class="label">Inscrição Municipal</span><div class="value" id="emit-im"></div></div>
-                <div class="data-item"><span class="label">CNAE Fiscal</span><div class="value" id="emit-cnae"></div></div>
-                <div class="data-item"><span class="label">Código de Regime Tributário</span><div class="value" id="emit-crt"></div></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="tab-dest" class="tab-content">
-        <div class="fieldset">
-            <div class="fieldset-title">Dados do Destinatário</div>
-            <div class="data-grid">
-                <div class="data-item"><span class="label">Nome / Razão Social</span><div class="value" id="dest-xnome"></div></div>
-                <div class="data-item"><span class="label">CPF / CNPJ</span><div class="value" id="dest-cnpj"></div></div>
-                <div class="data-item"><span class="label">Endereço</span><div class="value" id="dest-end"></div></div>
-                <div class="data-item"><span class="label">Bairro / Distrito</span><div class="value" id="dest-bairro"></div></div>
-                <div class="data-item"><span class="label">CEP</span><div class="value" id="dest-cep"></div></div>
-                <div class="data-item"><span class="label">Município</span><div class="value" id="dest-mun"></div></div>
-                <div class="data-item"><span class="label">Telefone</span><div class="value" id="dest-fone"></div></div>
-                <div class="data-item"><span class="label">UF</span><div class="value" id="dest-uf"></div></div>
-                <div class="data-item"><span class="label">País</span><div class="value" id="dest-pais"></div></div>
-                <div class="data-item"><span class="label">Indicador IE</span><div class="value" id="dest-indiedest"></div></div>
-                <div class="data-item"><span class="label">Inscrição Estadual</span><div class="value" id="dest-ie"></div></div>
-                <div class="data-item"><span class="label">Inscrição SUFRAMA</span><div class="value" id="dest-isuf"></div></div>
-                <div class="data-item"><span class="label">IM</span><div class="value" id="dest-im"></div></div>
-                <div class="data-item"><span class="label">E-mail</span><div class="value" id="dest-email"></div></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="tab-prod" class="tab-content">
-        <div class="fieldset-title">Dados dos Produtos e Serviços</div>
-        <div id="produtos-container">
-            <p style="text-align:center; color:#888;">Carregue um XML para visualizar os produtos.</p>
-        </div>
-    </div>
-
-    <div id="tab-totais" class="tab-content">
-        <div class="fieldset">
-            <div class="fieldset-title">Totais da NF-e (ICMS/Produtos)</div>
-            <div class="data-grid data-grid-small">
-                <div class="data-item"><span class="label">Base de Cálculo ICMS</span><div class="value" id="tot-vbc"></div></div>
-                <div class="data-item"><span class="label">Valor do ICMS</span><div class="value" id="tot-vicms"></div></div>
-                <div class="data-item"><span class="label">Valor do ICMS Desonerado</span><div class="value" id="tot-vicmsdeson"></div></div>
-                <div class="data-item"><span class="label">Valor Total do FCP</span><div class="value" id="tot-vfcp"></div></div>
-                <div class="data-item"><span class="label">Valor Total ICMS FCP</span><div class="value" id="tot-vfcpst"></div></div>
-                <div class="data-item"><span class="label">Valor Total ICMS Int. UF Dest.</span><div class="value" id="tot-vicmsufdest"></div></div>
-                <div class="data-item"><span class="label">Base de Cálculo ICMS ST</span><div class="value" id="tot-vbcst"></div></div>
-                <div class="data-item"><span class="label">Valor ICMS Substituição</span><div class="value" id="tot-vst"></div></div>
-                
-                <div class="data-item"><span class="label">Valor Total dos Produtos</span><div class="value" id="tot-vprod"></div></div>
-                <div class="data-item"><span class="label">Valor do Frete</span><div class="value" id="tot-vfrete"></div></div>
-                <div class="data-item"><span class="label">Valor do Seguro</span><div class="value" id="tot-vseg"></div></div>
-                <div class="data-item"><span class="label">Valor Total dos Descontos</span><div class="value" id="tot-vdesc"></div></div>
-                
-                <div class="data-item"><span class="label">Valor Total do II</span><div class="value" id="tot-vii"></div></div>
-                <div class="data-item"><span class="label">Valor Total do IPI</span><div class="value" id="tot-vipi"></div></div>
-                <div class="data-item"><span class="label">Valor Total do IPI Devolvido</span><div class="value" id="tot-vipidevol"></div></div>
-                <div class="data-item"><span class="label">Valor do PIS</span><div class="value" id="tot-vpis"></div></div>
-                <div class="data-item"><span class="label">Valor da COFINS</span><div class="value" id="tot-vcofins"></div></div>
-                <div class="data-item"><span class="label">Outras Despesas Acessórias</span><div class="value" id="tot-voutro"></div></div>
-                <div class="data-item"><span class="label">Valor Total da NFe</span><div class="value" id="tot-vnf2"></div></div>
-                <div class="data-item"><span class="label">Valor Aproximado dos Tributos</span><div class="value" id="tot-vtottrib"></div></div>
-            </div>
-        </div>
-    </div>
-
-    <div id="tab-transp" class="tab-content">
-         <div class="fieldset">
-            <div class="fieldset-title">Dados do Transporte</div>
-            <div class="data-grid">
-                <div class="data-item"><span class="label">Modalidade do Frete</span><div class="value" id="transp-modfrete"></div></div>
-            </div>
-            
-            <div class="sub-fieldset-title">Transportador</div>
-            <div class="data-grid">
-                <div class="data-item"><span class="label">CNPJ / CPF</span><div class="value" id="transp-cnpj"></div></div>
-                <div class="data-item"><span class="label">Razão Social / Nome</span><div class="value" id="transp-xnome"></div></div>
-                <div class="data-item"><span class="label">Inscrição Estadual</span><div class="value" id="transp-ie"></div></div>
-                <div class="data-item"><span class="label">Endereço Completo</span><div class="value" id="transp-xender"></div></div>
-                <div class="data-item"><span class="label">Município</span><div class="value" id="transp-xmun"></div></div>
-                <div class="data-item"><span class="label">UF</span><div class="value" id="transp-uf"></div></div>
-            </div>
-
-            <div class="sub-fieldset-title">Volumes</div>
-            <div id="volumes-container">
-                 <p style="font-size: 13px; color: #777;">Nenhum volume informado.</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="tab-cobr" class="tab-content">
-        <div class="fieldset-title">Formas de Pagamento / Fatura</div>
-        <div id="fatura-container" style="margin-bottom: 20px;"></div>
-        <div id="cobranca-container">
-             <p style="text-align:center; color:#888;">Nenhuma cobrança identificada.</p>
-        </div>
-    </div>
-
-    <div id="tab-inf" class="tab-content">
-        <div class="fieldset">
-            <div class="fieldset-title">Informações Adicionais</div>
-            <div class="data-grid">
-                <div class="data-item"><span class="label">Formato de Impressão DANFE</span><div class="value" id="inf-tpimp"></div></div>
-            </div>
-            
-            <div class="sub-fieldset-title">Informações Complementares de Interesse do Contribuinte</div>
-            <div class="data-grid" style="grid-template-columns: 1fr;">
-                <div class="data-item">
-                    <span class="label">Descrição</span>
-                    <div class="value" id="inf-cpl" style="height: auto; min-height: 60px; white-space: pre-wrap;"></div>
+        <div class="card-panel" style="padding: 1rem;">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 10px;">
+                <h3 style="margin:0; font-size: 1.1rem; color: var(--primary);">📋 Matriz de Conciliação Detalhada</h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 0.75rem; color: var(--text-muted); background: #f0f4f8; padding: 4px 10px; border-radius: 12px;">Tolerância: R$ 0,05</span>
+                    <button class="btn btn-imprimir" onclick="prepararImpressao()">🖨️ Imprimir</button>
                 </div>
             </div>
 
-            <div class="sub-fieldset-title">Observações do Contribuinte</div>
-            <div class="data-grid" style="grid-template-columns: 1fr;">
-                 <div class="data-item"><div id="inf-obs" class="value" style="border:none; padding:0;">Nenhuma observação.</div></div>
-            </div>
-
-            <div class="sub-fieldset-title">Documentos Fiscais Referenciados</div>
-            <div class="data-grid" style="grid-template-columns: 1fr;">
-                 <div class="data-item"><div id="inf-ref" class="value" style="border:none; padding:0;">Nenhum documento referenciado.</div></div>
+            <div class="table-wrapper">
+                <table id="validationTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%;">Estrutura Contábil DRE</th>
+                            <th style="width: 15%;">(A) Consolidado</th>
+                            <th style="width: 15%;">(B) Soma Filiais</th>
+                            <th style="width: 15%;">Diferença (A - B)</th>
+                            <th style="width: 15%; text-align: center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <div class="actions no-print" id="actionsContainer" style="display: none;">
-        <button class="btn" onclick="prepararImpressao()">🖨️ Preparar documento para impressão</button>
-    </div>
+    <footer>
+        ✅ <strong>Legenda de cores:</strong> Fundos azuis marcam os níveis pai. Borda esquerda azul cria agrupamento visual das filiais.<br>
+        ⚙️ Processamento 100% Client-Side. Seus dados não são enviados para nenhum servidor.
+    </footer>
 </div>
 
 <script>
-    // Inicialização da UI
-    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    let dynamicAccountMap = new Map();
 
-    function openTab(evt, tabId) {
-        if(document.body.classList.contains('print-mode')) return;
-        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(tabId).style.display = 'block';
-        if(evt) evt.currentTarget.classList.add('active');
-    }
+    document.getElementById('btnProcessar').addEventListener('click', async () => {
+        const fileConsolidado = document.getElementById('pdfConsolidado').files[0];
+        const filesFiliais = document.getElementById('pdfFiliais').files;
 
-    function prepararImpressao() {
-        document.body.classList.add('print-mode');
-        document.querySelectorAll('details').forEach(d => {
-            d.open = true;
-            if(!d.querySelector('.print-summary')) {
-                const pTitle = document.createElement('div');
-                pTitle.className = 'print-summary';
-                pTitle.style.cssText = 'font-weight: bold; margin-bottom: 10px; border-bottom: 1px solid #ccc;';
-                pTitle.textContent = d.querySelector('summary').textContent.replace(/[＋－]\s/g, '');
-                d.insertBefore(pTitle, d.firstChild);
-            }
-        });
-        
-        window.print();
-        
-        setTimeout(() => {
-            document.body.classList.remove('print-mode');
-            document.querySelectorAll('details').forEach(d => d.open = false);
-            document.querySelectorAll('.print-summary').forEach(el => el.remove());
-            document.querySelector('.tab-btn.active')?.click();
-        }, 1000);
-    }
-
-    // Utilitários Modernizados (ES6+)
-    const getVal = (parent, tag, def = '') => parent?.getElementsByTagName(tag)[0]?.textContent ?? def;
-    
-    const formatNumber = (val, decimals = 2) => {
-        if (!val) return '';
-        return Number(val).toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    };
-
-    const formatDateTime = (val) => val ? new Date(val).toLocaleString('pt-BR') : '';
-
-    const setText = (id, text) => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = text;
-    };
-
-    // Dicionários / Domínios
-    const DOMAINS = {
-        tpEmis: {'1':'1 - Normal', '2':'2 - Contingência FS-IA', '3':'3 - Contingência SCAN', '4':'4 - Contingência DPEC', '5':'5 - Contingência FS-DA', '6':'6 - Contingência SVC-AN', '7':'7 - Contingência SVC-RS', '9':'9 - Contingência off-line da NFC-e'},
-        finNFe: {'1':'1 - Normal', '2':'2 - Complementar', '3':'3 - Ajuste', '4':'4 - Devolução/Retorno'},
-        indIntermed: {'0':'0 - Operação sem intermediador', '1':'1 - Operação em site ou plataforma de terceiros'},
-        tpNF: {'0':'0 - Entrada', '1':'1 - Saída'},
-        modFrete: {'0':'0 - Emitente', '1':'1 - Dest/Remetente', '2':'2 - Terceiros', '3':'3 - Próprio Remetente', '4':'4 - Próprio Destinatário', '9':'9 - Sem Frete'},
-        tpImp: {'1':'1 - DANFE normal, retrato', '2':'2 - DANFE normal, paisagem', '3':'3 - DANFE Simplificado', '4':'4 - DANFE NFC-e', '5':'5 - DANFE NFC-e via mensagem'},
-        indIEDest: {'1':'1 - Contribuinte ICMS', '2':'2 - Contribuinte isento', '9':'9 - Não Contribuinte'},
-        crt: {'1':'1 - Simples Nacional', '2':'2 - Simples Nacional (excesso)', '3':'3 - Regime Normal'}
-    };
-
-    // Handler do Arquivo
-    document.getElementById('xmlFile').addEventListener('change', async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        try {
-            const text = await file.text();
-            const xmlDoc = new DOMParser().parseFromString(text, "text/xml");
-            
-            if (!xmlDoc.getElementsByTagName('NFe')[0] && !xmlDoc.getElementsByTagName('nfeProc')[0]) {
-                throw new Error("O arquivo selecionado não parece ser um XML de NF-e válido.");
-            }
-
-            popularUI(xmlDoc);
-
-            document.getElementById('dadosGeraisTopo').style.display = 'block';
-            document.getElementById('tabContainer').style.display = 'flex';
-            document.getElementById('actionsContainer').style.display = 'block';
-            document.querySelector('.tab-btn').click();
-        } catch(err) {
-            alert("Erro ao processar o arquivo: " + err.message);
-        }
-    });
-
-    // Camada de Apresentação
-    function popularUI(xml) {
-        const ide = xml.getElementsByTagName('ide')[0];
-        const emit = xml.getElementsByTagName('emit')[0];
-        const dest = xml.getElementsByTagName('dest')[0];
-        const icmsTot = xml.getElementsByTagName('ICMSTot')[0];
-        const infProt = xml.getElementsByTagName('infProt')[0];
-        const nfeProc = xml.getElementsByTagName('nfeProc')[0];
-        const transp = xml.getElementsByTagName('transp')[0];
-
-        // --- Topo & NFe ---
-        const chNFe = getVal(infProt, 'chNFe');
-        const nnf = getVal(ide, 'nNF');
-        const versao = nfeProc ? nfeProc.getAttribute('versao') : getVal(xml.documentElement, 'versao');
-        
-        setText('top-chave', chNFe);
-        setText('top-numero', nnf);
-        setText('top-versao', versao);
-        
-        setText('nfe-mod', getVal(ide, 'mod'));
-        setText('nfe-serie', getVal(ide, 'serie'));
-        setText('nfe-nnf', nnf);
-        setText('nfe-dhemi', formatDateTime(getVal(ide, 'dhEmi')));
-        setText('nfe-dhsai', formatDateTime(getVal(ide, 'dhSaiEnt')));
-        
-        setText('nfe-proc', `${getVal(ide, 'procEmi')} - com aplicativo do Contribuinte`);
-        setText('nfe-verproc', getVal(ide, 'verProc'));
-        setText('nfe-tpemis', DOMAINS.tpEmis[getVal(ide, 'tpEmis')] || getVal(ide, 'tpEmis'));
-        setText('nfe-finnfe', DOMAINS.finNFe[getVal(ide, 'finNFe')] || getVal(ide, 'finNFe'));
-        setText('nfe-natop', getVal(ide, 'natOp'));
-        setText('nfe-indintermed', DOMAINS.indIntermed[getVal(ide, 'indIntermed')] || getVal(ide, 'indIntermed'));
-        setText('nfe-tpnf', DOMAINS.tpNF[getVal(ide, 'tpNF')] || getVal(ide, 'tpNF'));
-        setText('nfe-digval', getVal(infProt, 'digVal'));
-        setText('nfe-prot', getVal(infProt, 'nProt'));
-        setText('nfe-dhrecbto', formatDateTime(getVal(infProt, 'dhRecbto')));
-
-        // --- Emitente ---
-        setText('emit-xnome', getVal(emit, 'xNome'));
-        setText('emit-xfant', getVal(emit, 'xFant'));
-        setText('emit-cnpj', getVal(emit, 'CNPJ') || getVal(emit, 'CPF'));
-        setText('emit-ie', getVal(emit, 'IE'));
-        setText('emit-iest', getVal(emit, 'IEST'));
-        setText('emit-im', getVal(emit, 'IM'));
-        setText('emit-cnae', getVal(emit, 'CNAE'));
-        setText('emit-crt', DOMAINS.crt[getVal(emit, 'CRT')] || getVal(emit, 'CRT'));
-        
-        const enderEmit = emit?.getElementsByTagName('enderEmit')[0];
-        if (enderEmit) {
-            const end = [getVal(enderEmit, 'xLgr'), getVal(enderEmit, 'nro')].filter(Boolean).join(', ');
-            const cpl = getVal(enderEmit, 'xCpl');
-            setText('emit-end', `${end} ${cpl ? '- ' + cpl : ''}`);
-            setText('emit-bairro', getVal(enderEmit, 'xBairro'));
-            setText('emit-cep', getVal(enderEmit, 'CEP'));
-            setText('emit-mun', `${getVal(enderEmit, 'cMun')} - ${getVal(enderEmit, 'xMun')}`);
-            setText('emit-fone', getVal(enderEmit, 'fone'));
-            setText('emit-uf', getVal(enderEmit, 'UF'));
-            setText('emit-pais', `${getVal(enderEmit, 'cPais')} - ${getVal(enderEmit, 'xPais')}`);
-        }
-
-        // --- Destinatário ---
-        if (dest) {
-            setText('dest-xnome', getVal(dest, 'xNome'));
-            setText('dest-cnpj', getVal(dest, 'CNPJ') || getVal(dest, 'CPF') || getVal(dest, 'idEstrangeiro'));
-            setText('dest-ie', getVal(dest, 'IE'));
-            setText('dest-indiedest', DOMAINS.indIEDest[getVal(dest, 'indIEDest')] || getVal(dest, 'indIEDest'));
-            setText('dest-isuf', getVal(dest, 'ISUF'));
-            setText('dest-im', getVal(dest, 'IM'));
-            setText('dest-email', getVal(dest, 'email'));
-
-            const enderDest = dest.getElementsByTagName('enderDest')[0];
-            if(enderDest) {
-                const end = [getVal(enderDest, 'xLgr'), getVal(enderDest, 'nro')].filter(Boolean).join(', ');
-                const cpl = getVal(enderDest, 'xCpl');
-                setText('dest-end', `${end} ${cpl ? '- ' + cpl : ''}`);
-                setText('dest-bairro', getVal(enderDest, 'xBairro'));
-                setText('dest-cep', getVal(enderDest, 'CEP'));
-                setText('dest-mun', `${getVal(enderDest, 'cMun')} - ${getVal(enderDest, 'xMun')}`);
-                setText('dest-fone', getVal(enderDest, 'fone'));
-                setText('dest-uf', getVal(enderDest, 'UF'));
-                setText('dest-pais', `${getVal(enderDest, 'cPais')} - ${getVal(enderDest, 'xPais')}`);
-            }
-        }
-
-        // --- Totais ---
-        if (icmsTot) {
-            const totaisMap = {
-                'tot-vbc': 'vBC', 'tot-vicms': 'vICMS', 'tot-vicmsdeson': 'vICMSDeson',
-                'tot-vfcp': 'vFCP', 'tot-vfcpst': 'vFCPST', 'tot-vicmsufdest': 'vICMSUFDest',
-                'tot-vbcst': 'vBCST', 'tot-vst': 'vST', 'tot-vprod': 'vProd',
-                'tot-vfrete': 'vFrete', 'tot-vseg': 'vSeg', 'tot-vdesc': 'vDesc',
-                'tot-vii': 'vII', 'tot-vipi': 'vIPI', 'tot-vipidevol': 'vIPIDevol',
-                'tot-vpis': 'vPIS', 'tot-vcofins': 'vCOFINS', 'tot-voutro': 'vOutro',
-                'tot-vnf2': 'vNF', 'tot-vtottrib': 'vTotTrib'
-            };
-            
-            Object.entries(totaisMap).forEach(([id, tag]) => {
-                setText(id, formatNumber(getVal(icmsTot, tag)));
-            });
-            setText('nfe-vNF', formatNumber(getVal(icmsTot, 'vNF')));
-        }
-
-        // --- Transporte ---
-        if (transp) {
-            const modF = getVal(transp, 'modFrete');
-            setText('transp-modfrete', DOMAINS.modFrete[modF] || modF);
-            
-            const transporta = transp.getElementsByTagName('transporta')[0];
-            if (transporta) {
-                setText('transp-cnpj', getVal(transporta, 'CNPJ') || getVal(transporta, 'CPF'));
-                setText('transp-xnome', getVal(transporta, 'xNome'));
-                setText('transp-ie', getVal(transporta, 'IE'));
-                setText('transp-xender', getVal(transporta, 'xEnder'));
-                setText('transp-xmun', getVal(transporta, 'xMun'));
-                setText('transp-uf', getVal(transporta, 'UF'));
-            }
-
-            const vols = Array.from(transp.getElementsByTagName('vol'));
-            if (vols.length > 0) {
-                document.getElementById('volumes-container').innerHTML = vols.map((v, i) => `
-                    <div class="data-grid" style="margin-bottom:15px; border-bottom:1px dashed #ccc; padding-bottom:10px;">
-                        <div class="data-item"><span class="label">Volume</span><div class="value">${i+1}</div></div>
-                        <div class="data-item"><span class="label">Quantidade</span><div class="value">${getVal(v, 'qVol')}</div></div>
-                        <div class="data-item"><span class="label">Espécie</span><div class="value">${getVal(v, 'esp')}</div></div>
-                        <div class="data-item"><span class="label">Marca</span><div class="value">${getVal(v, 'marca')}</div></div>
-                        <div class="data-item"><span class="label">Numeração</span><div class="value">${getVal(v, 'nVol')}</div></div>
-                        <div class="data-item"><span class="label">Peso Líquido</span><div class="value">${formatNumber(getVal(v, 'pesoL'), 3)}</div></div>
-                        <div class="data-item"><span class="label">Peso Bruto</span><div class="value">${formatNumber(getVal(v, 'pesoB'), 3)}</div></div>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // --- Cobrança ---
-        const fat = xml.getElementsByTagName('fat')[0];
-        if (fat) {
-            document.getElementById('fatura-container').innerHTML = `
-                <div class="data-grid">
-                    <div class="data-item"><span class="label">Número da Fatura</span><div class="value">${getVal(fat, 'nFat')}</div></div>
-                    <div class="data-item"><span class="label">Valor Original</span><div class="value">${formatNumber(getVal(fat, 'vOrig'))}</div></div>
-                    <div class="data-item"><span class="label">Valor Desconto</span><div class="value">${formatNumber(getVal(fat, 'vDesc'))}</div></div>
-                    <div class="data-item"><span class="label">Valor Líquido</span><div class="value">${formatNumber(getVal(fat, 'vLiq'))}</div></div>
-                </div>
-            `;
-        }
-
-        const pags = Array.from(xml.getElementsByTagName('detPag'));
-        if (pags.length > 0) {
-            document.getElementById('cobranca-container').innerHTML = pags.map(pag => {
-                const indPag = getVal(pag, 'indPag');
-                const indPagDesc = indPag === '0' ? '0 - Pagamento à Vista' : (indPag === '1' ? '1 - Pagamento a Prazo' : indPag);
-                const cartao = pag.getElementsByTagName('card')[0];
-                const vPag = getVal(pag, 'vPag');
-
-                return `
-                    <details>
-                        <summary>
-                            <span style="flex-grow:1;">${indPagDesc} | Meio: ${getVal(pag, 'tPag')}</span>
-                            <span style="margin-left: 15px; font-weight:normal; font-size:12px;">Valor: R$ ${formatNumber(vPag)}</span>
-                        </summary>
-                        <div class="details-content">
-                            <div class="data-grid">
-                                <div class="data-item"><span class="label">Ind. Forma de Pagamento</span><div class="value">${indPagDesc}</div></div>
-                                <div class="data-item"><span class="label">Meio de Pagamento (tPag)</span><div class="value">${getVal(pag, 'tPag')}</div></div>
-                                <div class="data-item"><span class="label">Valor do Pagamento</span><div class="value">${formatNumber(vPag)}</div></div>
-                            </div>
-                            ${cartao ? `
-                                <div class="sub-fieldset-title">Cartão / Integração</div>
-                                <div class="data-grid">
-                                    <div class="data-item"><span class="label">Tipo de Integração</span><div class="value">${getVal(cartao, 'tpIntegra')}</div></div>
-                                    <div class="data-item"><span class="label">CNPJ da Credenciadora</span><div class="value">${getVal(cartao, 'CNPJ')}</div></div>
-                                    <div class="data-item"><span class="label">Bandeira</span><div class="value">${getVal(cartao, 'tBand')}</div></div>
-                                    <div class="data-item"><span class="label">Número Autorização</span><div class="value">${getVal(cartao, 'cAut')}</div></div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </details>
-                `;
-            }).join('');
-        }
-
-        // --- Informações Adicionais ---
-        const infAdic = xml.getElementsByTagName('infAdic')[0];
-        setText('inf-tpimp', DOMAINS.tpImp[getVal(ide, 'tpImp')] || getVal(ide, 'tpImp'));
-        
-        if (infAdic) {
-            setText('inf-cpl', getVal(infAdic, 'infCpl'));
-            const obs = Array.from(infAdic.getElementsByTagName('obsCont'))
-                .map(o => `<b>${o.getAttribute('xCampo')}:</b> ${getVal(o, 'xTexto')}`)
-                .join('<br>');
-            if (obs) document.getElementById('inf-obs').innerHTML = obs;
-        }
-
-        const refs = Array.from(ide.getElementsByTagName('refNFe'))
-            .map(r => `Chave: ${r.textContent}`)
-            .join('<br>');
-        if (refs) document.getElementById('inf-ref').innerHTML = refs;
-
-        // --- Produtos e Serviços ---
-        renderProdutos(Array.from(xml.getElementsByTagName('det')));
-    }
-
-    // Engine de Renderização de Produtos
-    function renderProdutos(detList) {
-        const container = document.getElementById('produtos-container');
-        if (!detList.length) {
-            container.innerHTML = '<p style="text-align:center; color:#888;">Carregue um XML para visualizar os produtos.</p>';
+        if (!fileConsolidado || filesFiliais.length === 0) {
+            alert('Erro: Selecione o Consolidado e o arquivo de Filiais.');
             return;
         }
 
-        container.innerHTML = detList.map(det => {
-            const prod = det.getElementsByTagName('prod')[0];
-            const imposto = det.getElementsByTagName('imposto')[0];
-            const infAdProd = getVal(det, 'infAdProd');
+        toggleLoading(true);
+        dynamicAccountMap.clear(); 
 
-            // Extraction segura usando Optional Chaining
-            const icmsTag = imposto?.getElementsByTagName('ICMS')[0]?.firstElementChild;
-            const ipiTag = imposto?.getElementsByTagName('IPI')[0];
-            const pisTag = imposto?.getElementsByTagName('PIS')[0]?.firstElementChild;
-            const cofinsTag = imposto?.getElementsByTagName('COFINS')[0]?.firstElementChild;
+        try {
+            const pagesConsolidado = await extractPagesFromPDF(fileConsolidado);
+            let flatConsolidado = [];
+            pagesConsolidado.forEach(page => flatConsolidado.push(...page));
+            buildDynamicMap(flatConsolidado);
 
-            return `
-                <details>
-                    <summary>
-                        <span style="flex-grow:1;">${det.getAttribute('nItem')} - ${getVal(prod, 'xProd')}</span>
-                        <span style="margin-left: 15px; font-weight:normal; font-size:12px;">Qtd: ${formatNumber(getVal(prod, 'qCom'), 4)} | V. Total: R$ ${formatNumber(getVal(prod, 'vProd'))}</span>
-                    </summary>
-                    <div class="details-content">
-                        <div class="data-grid">
-                            <div class="data-item"><span class="label">Código do Produto</span><div class="value">${getVal(prod, 'cProd')}</div></div>
-                            <div class="data-item"><span class="label">Código NCM</span><div class="value">${getVal(prod, 'NCM')}</div></div>
-                            <div class="data-item"><span class="label">Código CEST</span><div class="value">${getVal(prod, 'CEST')}</div></div>
-                            <div class="data-item"><span class="label">CFOP</span><div class="value">${getVal(prod, 'CFOP')}</div></div>
-                            <div class="data-item"><span class="label">Valor Total do Frete</span><div class="value">${formatNumber(getVal(prod, 'vFrete'))}</div></div>
-                            <div class="data-item"><span class="label">Valor do Desconto</span><div class="value">${formatNumber(getVal(prod, 'vDesc'))}</div></div>
+            for (let i = 0; i < filesFiliais.length; i++) {
+                const pagesFilial = await extractPagesFromPDF(filesFiliais[i]);
+                pagesFilial.forEach((linhasDaPagina, pageIndex) => {
+                    const nomePagina = extrairNomeFilial(linhasDaPagina, `Filial Pág ${pageIndex + 1}`);
+                    accumulateFilialValues(linhasDaPagina, nomePagina);
+                });
+            }
+
+            renderAuditoria();
+
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao processar os PDFs. Verifique a formatação do arquivo.');
+        } finally {
+            toggleLoading(false);
+        }
+    });
+
+    function toggleLoading(isLoading) {
+        document.getElementById('loading').style.display = isLoading ? 'block' : 'none';
+        document.getElementById('btnProcessar').disabled = isLoading;
+        if (isLoading) {
+            document.getElementById('resultsArea').style.display = 'none';
+        }
+    }
+
+    // =========================================================================
+    // LÓGICA DE IMPRESSÃO
+    // =========================================================================
+    window.prepararImpressao = function() {
+        const closedBtns = document.querySelectorAll('.btn-expand:not(.open)');
+        closedBtns.forEach(btn => btn.click());
+        document.body.classList.add('print-mode');
+        
+        setTimeout(() => {
+            window.print();
+            setTimeout(() => {
+                document.body.classList.remove('print-mode');
+                closedBtns.forEach(btn => btn.click());
+            }, 500);
+        }, 300);
+    };
+
+    // =========================================================================
+    // ENGINE DE EXTRAÇÃO PDF COM JANELA DESLIZANTE DE TOLERÂNCIA DE Y
+    // =========================================================================
+    async function extractPagesFromPDF(file) {
+        const typedarray = new Uint8Array(await file.arrayBuffer());
+        const pdf = await pdfjsLib.getDocument(typedarray).promise;
+        let allPages = [];
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            
+            // Remove itens puramente vazios
+            let items = textContent.items.filter(item => item.str.trim() !== '');
+            
+            // Ordena usando a janela deslizante de Y (Tolerância de 4 pixels de desalinhamento)
+            items.sort((a, b) => {
+                if (Math.abs(b.transform[5] - a.transform[5]) > 4) {
+                    return b.transform[5] - a.transform[5];
+                }
+                return a.transform[4] - b.transform[4];
+            });
+
+            let pageLines = [];
+            let currentLine = [];
+            let currentY = null;
+
+            items.forEach(item => {
+                if (currentY === null) {
+                    currentY = item.transform[5];
+                    currentLine.push(item);
+                } else if (Math.abs(currentY - item.transform[5]) <= 4) {
+                    currentLine.push(item);
+                } else {
+                    currentLine.sort((a, b) => a.transform[4] - b.transform[4]);
+                    pageLines.push(currentLine.map(i => i.str.trim()).join(' '));
+                    currentY = item.transform[5];
+                    currentLine = [item];
+                }
+            });
+            if (currentLine.length > 0) {
+                currentLine.sort((a, b) => a.transform[4] - b.transform[4]);
+                pageLines.push(currentLine.map(i => i.str.trim()).join(' '));
+            }
+            
+            allPages.push(pageLines);
+        }
+        return allPages;
+    }
+
+    function extrairNomeFilial(linhas, fallback) {
+        let textoFilial = "", complemento = "";
+        for (let i = 0; i < Math.min(20, linhas.length); i++) {
+            const linha = linhas[i];
+            if (!textoFilial && linha.match(/Filial:\s*[\d,]+/i)) textoFilial = linha.trim();
+            if (textoFilial && !linha.includes('Filial:') && !linha.includes('Período') && !linha.includes('Tela:') && !linha.includes('CULTURAMA') && !linha.includes('Demonstrativo') && !linha.includes('Página') && !linha.toLowerCase().includes('valores expressos') && linha.length > 3) {
+                if (!linha.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}\-\d{2}/)) { complemento = linha.trim(); break; }
+            }
+        }
+        let nomeFinal = textoFilial || fallback;
+        if (textoFilial && complemento) {
+            if (textoFilial.toUpperCase().includes(complemento.substring(0, 5).toUpperCase())) nomeFinal = textoFilial;
+            else nomeFinal = `${textoFilial} - ${complemento}`;
+        }
+        nomeFinal = nomeFinal.split(/Valores expressos/i)[0].trim();
+        if (nomeFinal.endsWith('-')) nomeFinal = nomeFinal.substring(0, nomeFinal.length - 1).trim();
+        return nomeFinal;
+    }
+
+    // =========================================================================
+    // O CORAÇÃO DO AUDITOR: REGEX ROBUSTO E CHAVE NORMALIZADA
+    // =========================================================================
+    function parseDRELine(line) {
+        // Regex captura a última cadeia monetária da linha, tolerando os erros comuns do FastReport
+        // Ex: "1.000,00", "-1.000,00", "(1.000,00)", "1.000,00()", "1.000,00 (-)"
+        const numRegex = /((?:[\-\(]\s*)?\d{1,3}(?:\.\d{3})*(?:,\d{2})(?:\s*[\-\)]|\s*\(\s*\))?)\s*$/;
+        const match = line.match(numRegex);
+        
+        if (match) {
+            const rawValue = match[1];
+            let label = line.replace(rawValue, '').trim().replace(/[\.]+$/, '').trim();
+            
+            if (label.length > 3 && /[a-zA-Z]/.test(label)) {
+                
+                // Extrai apenas dígitos e vírgula para parseFloat seguro
+                let valStr = rawValue.replace(/[^0-9,]/g, '').replace(',', '.');
+                let numericValue = parseFloat(valStr);
+                
+                // Trata as diversas máscaras de negativo (incluindo o "()" no fim da linha)
+                if (rawValue.includes('(') || rawValue.includes('-') || rawValue.includes(')')) {
+                    numericValue = -Math.abs(numericValue);
+                }
+                
+                // Classifica como analítica caso tenha a máscara contábil
+                const isAnalitica = /^\d\.\d{2}\.\d{2}\.\d{2}/.test(label);
+                
+                // CRUCIAL: Remove o código "3.01.02.01" do label para usar como Chave Limpa
+                let cleanLabel = label;
+                if (isAnalitica) {
+                    cleanLabel = label.replace(/^\d\.\d{2}\.\d{2}\.\d{2}/, '').trim();
+                }
+
+                return { 
+                    label: label, 
+                    cleanLabel: cleanLabel, 
+                    value: numericValue, 
+                    isAnalitica: isAnalitica 
+                };
+            }
+        }
+        return null;
+    }
+
+    // Normalizador que remove todos os acentos e padroniza para upper case, garantindo match 100%
+    const normalizeKey = (str) => {
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, "") 
+                  .replace(/[^A-Z0-9\(\)\-\=\/]/gi, '')
+                  .toUpperCase();
+    };
+
+    function buildDynamicMap(linhas) {
+        linhas.forEach(line => {
+            const parsed = parseDRELine(line);
+            if (parsed) {
+                // Utiliza a chave limpa (sem numeração estrutural)
+                const key = normalizeKey(parsed.cleanLabel);
+                
+                if (!dynamicAccountMap.has(key)) {
+                    dynamicAccountMap.set(key, {
+                        originalLabel: parsed.label, // Mantemos a numeração apenas para exibição
+                        consolidadoValue: parsed.value,
+                        filiaisAcumulado: 0,
+                        filiaisDetail: [],
+                        isAnalitica: parsed.isAnalitica
+                    });
+                } else {
+                    dynamicAccountMap.get(key).consolidadoValue += parsed.value;
+                }
+            }
+        });
+    }
+
+    function accumulateFilialValues(linhasDaPagina, nomeFilial) {
+        linhasDaPagina.forEach(line => {
+            const parsed = parseDRELine(line);
+            if (parsed) {
+                const key = normalizeKey(parsed.cleanLabel);
+                
+                if (dynamicAccountMap.has(key)) {
+                    const conta = dynamicAccountMap.get(key);
+                    conta.filiaisAcumulado += parsed.value;
+                    
+                    conta.filiaisDetail.push({
+                        nome: nomeFilial,
+                        valor: parsed.value
+                    });
+                }
+            }
+        });
+    }
+
+    function formatBRL(valor) {
+        if (valor === 0) return 'R$ 0,00';
+        const formatted = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(valor));
+        return valor < 0 ? `(R$ ${formatted})` : `R$ ${formatted}`;
+    }
+
+    window.toggleDetails = function(btn, detailClass) {
+        const rows = document.querySelectorAll('.' + detailClass);
+        if (rows.length === 0) return;
+        
+        const isHidden = rows[0].style.display === 'none';
+        rows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
+        
+        const parentRow = btn.closest('tr');
+        
+        if (isHidden) {
+            btn.textContent = '−';
+            btn.classList.add('open');
+            if(parentRow) parentRow.classList.add('parent-expanded');
+        } else {
+            btn.textContent = '+';
+            btn.classList.remove('open');
+            if(parentRow) parentRow.classList.remove('parent-expanded');
+        }
+    };
+
+    function renderAuditoria() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        let index = 0;
+        let divergenciasCount = 0;
+        let finalConsolidado = 0;
+        let finalFiliais = 0;
+
+        for (let [key, data] of dynamicAccountMap) {
+            index++;
+            const safeClass = 'detalhe-conta-' + index;
+            const diferenca = Math.round((data.consolidadoValue - data.filiaisAcumulado) * 100) / 100;
+            
+            let statusHtml = ''; let diffClass = '';
+
+            if (data.consolidadoValue === 0 && data.filiaisAcumulado === 0) {
+                statusHtml = '<span class="status-badge status-na">N/A</span>';
+            } else if (Math.abs(diferenca) <= 0.05) {
+                statusHtml = '<span class="status-badge status-ok">Conciliado</span>';
+                diffClass = 'diff-ok';
+            } else {
+                statusHtml = '<span class="status-badge status-erro">Divergente</span>';
+                diffClass = 'diff-erro';
+                divergenciasCount++;
+            }
+
+            const isTotalizador = key.includes('(=)') || key.includes('LUCRO') || key.includes('RESULTADO') || key.includes('LIQUIDA');
+            
+            // Tenta pegar o último resultado líquido para os KPIs mestre
+            if (key.includes('RESULTADO') && (key.includes('LIQUIDO') || key.includes('LQUIDO'))) {
+                finalConsolidado = data.consolidadoValue;
+                finalFiliais = data.filiaisAcumulado;
+            }
+
+            let rowStyleClass = '';
+            if (isTotalizador) rowStyleClass = 'row-totalizador';
+            else if (data.isAnalitica) rowStyleClass = 'conta-analitica';
+            else rowStyleClass = 'conta-sintetica';
+
+            const colorClassA = data.consolidadoValue < 0 ? 'val-negative' : 'val-positive';
+            const colorClassB = data.filiaisAcumulado < 0 ? 'val-negative' : 'val-positive';
+
+            const btnExpandHtml = data.filiaisDetail.length > 0 
+                ? `<button class="btn-expand" onclick="toggleDetails(this, '${safeClass}')" title="Ver Composição">+</button>`
+                : `<span style="display:inline-block; width: 36px;"></span>`;
+
+            tbody.innerHTML += `
+                <tr class="${rowStyleClass}">
+                    <td>
+                        <div style="display:flex; align-items:center;">
+                            ${btnExpandHtml}
+                            <span class="account-label">${data.originalLabel}</span>
                         </div>
-
-                        <div class="data-grid">
-                            <div class="data-item"><span class="label">Cód. EAN Comercial</span><div class="value">${getVal(prod, 'cEAN')}</div></div>
-                            <div class="data-item"><span class="label">Unid. Comercial</span><div class="value">${getVal(prod, 'uCom')}</div></div>
-                            <div class="data-item"><span class="label">Qtd. Comercial</span><div class="value">${formatNumber(getVal(prod, 'qCom'), 4)}</div></div>
-                            <div class="data-item"><span class="label">Vlr Unit. Comercialização</span><div class="value">${formatNumber(getVal(prod, 'vUnCom'), 10)}</div></div>
-                            
-                            <div class="data-item"><span class="label">Cód. EAN Tributável</span><div class="value">${getVal(prod, 'cEANTrib')}</div></div>
-                            <div class="data-item"><span class="label">Unid. Tributável</span><div class="value">${getVal(prod, 'uTrib')}</div></div>
-                            <div class="data-item"><span class="label">Qtd. Tributável</span><div class="value">${formatNumber(getVal(prod, 'qTrib'), 4)}</div></div>
-                            <div class="data-item"><span class="label">Vlr Unit. Tributação</span><div class="value">${formatNumber(getVal(prod, 'vUnTrib'), 10)}</div></div>
-                        </div>
-                        
-                        <div class="data-grid">
-                            <div class="data-item"><span class="label">Pedido de Compra</span><div class="value">${getVal(prod, 'xPed')}</div></div>
-                            <div class="data-item"><span class="label">Item do Pedido</span><div class="value">${getVal(prod, 'nItemPed')}</div></div>
-                            <div class="data-item"><span class="label">Valor Aprox. Tributos</span><div class="value">${formatNumber(getVal(imposto, 'vTotTrib'))}</div></div>
-                        </div>
-
-                        <div class="sub-fieldset-title" style="color:var(--title-color);">ICMS Normal e ST</div>
-                        <div class="data-grid">
-                            <div class="data-item"><span class="label">Origem</span><div class="value">${icmsTag ? getVal(icmsTag, 'orig') : ''}</div></div>
-                            <div class="data-item"><span class="label">Tributação (CST/CSOSN)</span><div class="value">${icmsTag ? (getVal(icmsTag, 'CST') || getVal(icmsTag, 'CSOSN')) : ''}</div></div>
-                            <div class="data-item"><span class="label">Modalidade BC</span><div class="value">${icmsTag ? getVal(icmsTag, 'modBC') : ''}</div></div>
-                            <div class="data-item"><span class="label">Base de Cálculo ICMS</span><div class="value">${icmsTag ? formatNumber(getVal(icmsTag, 'vBC')) : ''}</div></div>
-                            <div class="data-item"><span class="label">Alíquota ICMS</span><div class="value">${icmsTag ? formatNumber(getVal(icmsTag, 'pICMS')) : ''}</div></div>
-                            <div class="data-item"><span class="label">Valor ICMS</span><div class="value">${icmsTag ? formatNumber(getVal(icmsTag, 'vICMS')) : ''}</div></div>
-                        </div>
-
-                        <div class="sub-fieldset-title" style="color:var(--title-color);">Imposto Sobre Produtos Industrializados (IPI)</div>
-                        <div class="data-grid">
-                             <div class="data-item"><span class="label">Classe Enquadramento</span><div class="value">${ipiTag ? getVal(ipiTag, 'clEnq') : ''}</div></div>
-                             <div class="data-item"><span class="label">Cód Enquadramento</span><div class="value">${ipiTag ? getVal(ipiTag, 'cEnq') : ''}</div></div>
-                             <div class="data-item"><span class="label">CST</span><div class="value">${ipiTag ? getVal(ipiTag.firstElementChild, 'CST') : ''}</div></div>
-                             <div class="data-item"><span class="label">Base de Cálculo</span><div class="value">${ipiTag ? formatNumber(getVal(ipiTag.firstElementChild, 'vBC')) : ''}</div></div>
-                             <div class="data-item"><span class="label">Alíquota</span><div class="value">${ipiTag ? formatNumber(getVal(ipiTag.firstElementChild, 'pIPI')) : ''}</div></div>
-                             <div class="data-item"><span class="label">Valor IPI</span><div class="value">${ipiTag ? formatNumber(getVal(ipiTag.firstElementChild, 'vIPI')) : ''}</div></div>
-                        </div>
-
-                        <div class="data-grid">
-                            <div class="data-item">
-                                <div class="sub-fieldset-title" style="color:var(--title-color);">PIS</div>
-                                <div class="data-grid data-grid-small">
-                                    <div class="data-item"><span class="label">CST</span><div class="value">${pisTag ? getVal(pisTag, 'CST') : ''}</div></div>
-                                    <div class="data-item"><span class="label">Base Cálculo</span><div class="value">${pisTag ? formatNumber(getVal(pisTag, 'vBC')) : ''}</div></div>
-                                    <div class="data-item"><span class="label">Alíquota</span><div class="value">${pisTag ? formatNumber(getVal(pisTag, 'pPIS')) : ''}</div></div>
-                                    <div class="data-item"><span class="label">Valor</span><div class="value">${pisTag ? formatNumber(getVal(pisTag, 'vPIS')) : ''}</div></div>
-                                </div>
-                            </div>
-                            <div class="data-item">
-                                <div class="sub-fieldset-title" style="color:var(--title-color);">COFINS</div>
-                                <div class="data-grid data-grid-small">
-                                    <div class="data-item"><span class="label">CST</span><div class="value">${cofinsTag ? getVal(cofinsTag, 'CST') : ''}</div></div>
-                                    <div class="data-item"><span class="label">Base Cálculo</span><div class="value">${cofinsTag ? formatNumber(getVal(cofinsTag, 'vBC')) : ''}</div></div>
-                                    <div class="data-item"><span class="label">Alíquota</span><div class="value">${cofinsTag ? formatNumber(getVal(cofinsTag, 'pCOFINS')) : ''}</div></div>
-                                    <div class="data-item"><span class="label">Valor</span><div class="value">${cofinsTag ? formatNumber(getVal(cofinsTag, 'vCOFINS')) : ''}</div></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        ${infAdProd ? `<div class="sub-fieldset-title">Informações adicionais do produto</div><div class="value" style="background:#f4f4f4;">${infAdProd}</div>` : ''}
-                    </div>
-                </details>
+                    </td>
+                    <td class="${colorClassA}">${formatBRL(data.consolidadoValue)}</td>
+                    <td class="${colorClassB}">${formatBRL(data.filiaisAcumulado)}</td>
+                    <td class="${diffClass}">${formatBRL(diferenca)}</td>
+                    <td style="text-align: center;">${statusHtml}</td>
+                </tr>
             `;
-        }).join('');
+
+            if (data.filiaisDetail.length > 0) {
+                let detalhesHtml = '';
+                const totalFiliais = data.filiaisDetail.length;
+                data.filiaisDetail.forEach((filial, fIndex) => {
+                    const colorVal = filial.valor < 0 ? 'val-negative' : 'val-positive';
+                    const isLastClass = (fIndex === totalFiliais - 1) ? 'last-child' : '';
+                    detalhesHtml += `
+                        <tr class="detail-row ${safeClass} ${isLastClass}" style="display: none;">
+                            <td>↳ ${filial.nome}</td>
+                            <td class="detail-empty">-</td>
+                            <td class="${colorVal}">${formatBRL(filial.valor)}</td>
+                            <td class="detail-empty">-</td>
+                            <td class="detail-empty">-</td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML += detalhesHtml;
+            }
+        }
+
+        // Popula KPIs Superiores
+        document.getElementById('kpiResultadoMaster').textContent = formatBRL(finalConsolidado);
+        document.getElementById('kpiResultadoMaster').className = 'kpi-value ' + (finalConsolidado < 0 ? 'danger' : 'success');
+        
+        document.getElementById('kpiResultadoFiliais').textContent = formatBRL(finalFiliais);
+        document.getElementById('kpiResultadoFiliais').className = 'kpi-value ' + (finalFiliais < 0 ? 'danger' : 'success');
+
+        document.getElementById('kpiTotalContas').textContent = dynamicAccountMap.size;
+        
+        const badgeDivergencia = document.getElementById('kpiDivergencias');
+        badgeDivergencia.textContent = divergenciasCount;
+        badgeDivergencia.className = 'kpi-value ' + (divergenciasCount > 0 ? 'danger' : 'success');
+
+        document.getElementById('resultsArea').style.display = 'block';
     }
 </script>
 </body>
